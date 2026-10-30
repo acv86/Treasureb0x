@@ -26,6 +26,7 @@ export function HuntDetail({ code }: { code: string }) {
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [skippedStories, setSkippedStories] = useState<Record<string, boolean>>({});
   const [shake, setShake] = useState(0);
 
   function load() {
@@ -159,6 +160,29 @@ export function HuntDetail({ code }: { code: string }) {
                     {task.state === "done" ? tr("done") : task.state === "skipped" ? tr("skipped") : tr("open")}
                   </Badge>
                 </div>
+                {task.story && !skippedStories[task.id] && (
+                  <div className="mt-2 space-y-2">
+                    <p>{task.story}</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-9 rounded-full px-3"
+                      onClick={() => setSkippedStories((prev) => ({ ...prev, [task.id]: true }))}
+                    >
+                      {tr("skipStory")}
+                    </Button>
+                  </div>
+                )}
+                {task.story && skippedStories[task.id] && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="mt-2 h-9 rounded-full px-3"
+                    onClick={() => setSkippedStories((prev) => ({ ...prev, [task.id]: false }))}
+                  >
+                    {tr("showStory")}
+                  </Button>
+                )}
                 {task.instruction && <p className="mt-2">{task.instruction}</p>}
                 {task.hint && <p className="mt-2 text-sm text-muted-foreground">{task.hint}</p>}
                 {task.state === "open" && hunt.phase === "open" && (

@@ -2,6 +2,8 @@ import "server-only";
 
 import { verifyMessage } from "viem";
 import { hashCode, hashesEqual, isJoinCode, isStepCode, normalizeCode } from "../codes";
+import { proximityFor, type SolutionMethod, type SpotLocation } from "../hunt-schema";
+import { pinIsSet, textPlaceIsSet } from "../maps";
 import {
   allTasks,
   phaseAt,
@@ -37,6 +39,7 @@ function shapeOf(hunt: StoredHunt): HuntShape {
         id: task.id,
         title: task.title,
         instruction: task.instruction,
+        story: task.story ?? null,
         hint: task.hint,
       })),
     })),
@@ -286,9 +289,31 @@ export type CreateBody = {
   stages: {
     title: string;
     rule: { kind: "all" } | { kind: "atLeast"; n: number };
-    tasks: { title: string; instruction: string; code: string; hint?: string }[];
+    tasks: {
+      title: string;
+      instruction: string;
+      code: string;
+      hint?: string;
+      story?: string;
+      method?: SolutionMethod;
+      location?: { label?: string; lat?: number | null; lng?: number | null } | null;
+    }[];
   }[];
+  mapBased?: boolean;
+  proximity?: boolean;
 };
+
+function readLocation(value: CreateBody["stages"][number]["tasks"][number]["location"]): SpotLocation | null {
+  if (!value || typeof value !== "object") return null;
+  const label = cleanText(value.label, 200);
+  const rawLat = typeof value.lat === "number" && Number.isFinite(value.lat) ? value.lat : null;
+  const rawLng = typeof value.lng === "number" && Number.isFinite(value.lng) ? value.lng : null;
+  const pair = rawLat !== null && rawLng !== null && rawLat >= -90 && rawLat <= 90 && rawLng >= -180 && rawLng <= 180;
+  const lat = pair ? rawLat : null;
+  const lng = pair ? rawLng : null;
+  if (!label && lat === null && lng === null) return null;
+  return { label, lat, lng };
+}
 
 function cleanText(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -317,6 +342,8 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
   if (body.endsAt && !Number.isFinite(endsAt)) throw new ActionError("invalid");
   if (startsAt !== null && endsAt !== null && endsAt <= startsAt) throw new ActionError("invalid");
   if (!Array.isArray(body.stages) || body.stages.length === 0) throw new ActionError("invalid");
+  const mapBased = body.mapBased === true;
+  const proximity = proximityFor({ mapBased, proximity: body.proximity === true });
 
   const stages: StoredStage[] = [];
   for (const stage of body.stages) {
@@ -327,14 +354,23 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
     for (const task of stage.tasks) {
       const taskTitle = cleanText(task.title, 60);
       const instruction = cleanText(task.instruction, 500);
+      const story = cleanText(task.story, 280);
       const code = normalizeCode(task.code ?? "");
       const hint = cleanText(task.hint, 200);
-      if (!taskTitle || !instruction || !isStepCode(code)) throw new ActionError("invalid");
+      const method = task.method === "choice" || task.method === "qr" ? task.method : "code";
+      const location = readLocation(task.location);
+      const placeOk = mapBased ? pinIsSet(location) : textPlaceIsSet(location);
+      if (!taskTitle || !instruction || !isStepCode(code) || method !== "code" || !placeOk || !location) {
+        throw new ActionError("invalid");
+      }
       tasks.push({
         id: newId("step"),
         title: taskTitle,
         instruction,
+        story: story || null,
         hint: hint || null,
+        method,
+        location,
         codePlain: code,
         codeHash: await hashCode(code),
       });
@@ -370,6 +406,8 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
       playerCap: LIMITS.playersPerHunt,
       sample: false,
       publishTx: "",
+      mapBased,
+      proximityMetres: proximity.metres,
       prize: { title: prizeTitle, description: prizeAbout },
       stages,
     };
