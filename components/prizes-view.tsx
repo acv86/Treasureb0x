@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { PrizeImage } from "@/components/prize-image";
 import { useApp, useT } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { getJson, type CollectionItem } from "@/lib/client-api";
@@ -62,11 +63,14 @@ export function PrizesView() {
         <section className="space-y-3">
           <h2 className="font-heading text-xl">{tr("prizes")}</h2>
           {prizes.map((item) => (
-            <Link key={item.id} href={`/hunts/${item.joinCode}`} className="block rounded-3xl bg-primary p-4 text-primary-foreground">
-              <p className="text-xs uppercase tracking-wide opacity-80">{tr("kept")}</p>
-              <h3 className="font-heading text-2xl">{item.title}</h3>
-              <p className="mt-1">{item.description}</p>
-              <p className="mt-2 text-sm opacity-80">{tr("fromHunt", { name: item.huntName })}</p>
+            <Link key={item.id} href={`/hunts/${item.joinCode}`} className="block overflow-hidden rounded-3xl bg-card ring-1 ring-foreground/10">
+              {item.image && <PrizeImage src={item.image} alt={item.title} className="rounded-none ring-0" />}
+              <div className="p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("kept")}</p>
+                <h3 className="font-heading text-2xl">{item.title}</h3>
+                <p className="mt-1">{item.description}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{tr("fromHunt", { name: item.huntName })}</p>
+              </div>
             </Link>
           ))}
         </section>

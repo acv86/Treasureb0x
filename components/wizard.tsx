@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { PrizeImage } from "@/components/prize-image";
 import { Term } from "@/components/term";
 import { useApp, useT } from "@/components/providers";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { ClientError, getJson, signedPost, type HomePayload } from "@/lib/client
 import { isStepCode, randomJoinCode } from "@/lib/codes";
 import type { Structure } from "@/lib/domain";
 import { LIMITS } from "@/lib/limits";
+import { resolvePrizeImage } from "@/lib/prize-image";
 import { errorText, type CopyKey } from "@/lib/i18n";
 
 type DraftTask = { key: string; title: string; instruction: string; code: string; hint: string };
@@ -105,6 +107,7 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
   }, [open, session]);
 
   const dirty = Boolean(draft.name || draft.description || draft.structure || draft.prizeTitle);
+  const prizePreview = useMemo(() => resolvePrizeImage({ huntTitle: draft.name }), [draft.name]);
   const left = Math.max(allowance.cap - allowance.used, 0);
 
   function close() {
@@ -344,6 +347,7 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
           {!confirmClose && step === 3 && (
             <div className="space-y-3">
+              <PrizeImage src={prizePreview} alt={draft.name || draft.prizeTitle} />
               <p className="text-sm text-muted-foreground"><Term tip={tr("prizeHelp")}>{tr("stepPrize")}</Term></p>
               <Label htmlFor="prize-name">{tr("prizeName")}</Label>
               <Input id="prize-name" value={draft.prizeTitle} onChange={(event) => setDraft({ ...draft, prizeTitle: event.target.value })} className="h-12 rounded-2xl px-3 text-base" />
@@ -354,6 +358,7 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
           {!confirmClose && step === 4 && (
             <div className="space-y-3">
+              <PrizeImage src={prizePreview} alt={draft.name || draft.prizeTitle} />
               <p className="font-heading text-2xl">{draft.name}</p>
               <p>{draft.description}</p>
               {draft.structure && <p>{tr(structureLine[draft.structure])}</p>}

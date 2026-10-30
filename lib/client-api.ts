@@ -45,7 +45,7 @@ export type HuntDetail = {
   sample: boolean;
   playerCount: number;
   playerCap: number;
-  prize: { title: string; description: string };
+  prize: { title: string; description: string; image: string };
   joined: boolean;
   prizeClaimed: boolean;
   phase: "upcoming" | "open" | "ended";
@@ -64,6 +64,8 @@ export type CollectionItem = {
   huntName: string;
   joinCode: string;
   issuedAt: string;
+  /** Prize picture. A data URI today, or a custom image later. */
+  image?: string;
 };
 
 export type MineHunt = {

@@ -14,6 +14,7 @@ import {
 } from "../domain";
 import { LIMITS, microToEth } from "../limits";
 import { canonicalMessage } from "../message";
+import { normalizeCustomPrizeImage, prizeImageForCredential, resolvePrizeImage } from "../prize-image";
 import { sponsor } from "../relayer";
 import { createMockOcp } from "./ocp-mock";
 import { ActionError, withStore } from "./store";
@@ -93,7 +94,11 @@ function detail(db: Db, hunt: StoredHunt, address: string | null) {
     sample: hunt.sample,
     playerCount: playerCount(db, hunt.id),
     playerCap: hunt.playerCap,
-    prize: hunt.prize,
+    prize: {
+      title: hunt.prize.title,
+      description: hunt.prize.description,
+      image: resolvePrizeImage({ huntTitle: hunt.name, customImage: hunt.prize.image }),
+    },
     joined: Boolean(progress),
     prizeClaimed: Boolean(progress?.prizeClaimedAt),
     ...view,
@@ -267,6 +272,8 @@ export async function claimPrize(actor: SignedActor, joinCode: string) {
       huntId: hunt.id,
       title: hunt.prize.title,
       description: hunt.prize.description,
+      huntTitle: hunt.name,
+      customImage: hunt.prize.image,
     });
     db.credentials.push(credential);
     progress.prizeClaimedAt = credential.issuedAt;
@@ -282,7 +289,7 @@ export type CreateBody = {
   startsAt: string | null;
   endsAt: string | null;
   displayName: string;
-  prize: { title: string; description: string };
+  prize: { title: string; description: string; image?: string | null };
   stages: {
     title: string;
     rule: { kind: "all" } | { kind: "atLeast"; n: number };
@@ -370,7 +377,11 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
       playerCap: LIMITS.playersPerHunt,
       sample: false,
       publishTx: "",
-      prize: { title: prizeTitle, description: prizeAbout },
+      prize: {
+        title: prizeTitle,
+        description: prizeAbout,
+        image: normalizeCustomPrizeImage(body.prize?.image),
+      },
       stages,
     };
     charge(db, actor.deviceId, hunt.id);
@@ -408,11 +419,27 @@ export async function collection(address: string) {
   return withStore((db) => {
     const items = db.credentials
       .filter((item) => item.holder === address)
-      .map((item) => ({
-        ...item,
-        huntName: db.hunts.find((hunt) => hunt.id === item.huntId)?.name ?? "",
-        joinCode: db.hunts.find((hunt) => hunt.id === item.huntId)?.joinCode ?? "",
-      }));
+      .map((item) => {
+        const hunt = db.hunts.find((candidate) => candidate.id === item.huntId);
+        const image =
+          item.kind === "prize"
+            ? prizeImageForCredential({
+                tokenURI: item.tokenURI,
+                huntTitle: hunt?.name ?? item.title,
+                customImage: hunt?.prize.image,
+              })
+            : undefined;
+        return {
+          id: item.id,
+          kind: item.kind,
+          title: item.title,
+          description: item.description,
+          huntName: hunt?.name ?? "",
+          joinCode: hunt?.joinCode ?? "",
+          issuedAt: item.issuedAt,
+          ...(image ? { image } : {}),
+        };
+      });
     return { items };
   }, false);
 }

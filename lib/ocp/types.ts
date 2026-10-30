@@ -21,6 +21,8 @@ export type OcpCredential = {
   description: string;
   txHash: string;
   issuedAt: string;
+  /** JSON data URI for a prize NFT. Its `image` is the prize picture. */
+  tokenURI?: string;
 };
 
 export type PublishHuntInput = {
@@ -43,6 +45,10 @@ export type MintPrizeInput = {
   huntId: string;
   title: string;
   description: string;
+  /** Hunt title, watermarked on the default prize picture. */
+  huntTitle: string;
+  /** When set, replaces the generated picture in token metadata. */
+  customImage?: string | null;
 };
 
 export interface OcpClient {
