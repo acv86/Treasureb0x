@@ -1,4 +1,5 @@
 import { hashCode, normalizeCode } from "./codes";
+import type { HeldCredential } from "./credentials";
 import { deviceId, loadSession, accountFromWords } from "./identity";
 import { canonicalMessage } from "./message";
 import type { PublicStage, Structure } from "./domain";
@@ -56,15 +57,7 @@ export type HuntDetail = {
   stages: PublicStage[];
 };
 
-export type CollectionItem = {
-  id: string;
-  kind: "mark" | "prize";
-  title: string;
-  description: string;
-  huntName: string;
-  joinCode: string;
-  issuedAt: string;
-};
+export type CollectionItem = HeldCredential;
 
 export type MineHunt = {
   joinCode: string;

@@ -12,6 +12,7 @@ import {
   type PlayerView,
   type Structure,
 } from "../domain";
+import { isB0xCredentialKind } from "../credentials";
 import { LIMITS, microToEth } from "../limits";
 import { canonicalMessage } from "../message";
 import { sponsor } from "../relayer";
@@ -404,15 +405,40 @@ export async function endHunt(actor: SignedActor, joinCode: string) {
   });
 }
 
+/**
+ * b0x credentials minted for this id: a mark per opened step, a prize when claimed.
+ * Wallet balances, unrelated tokens, and other NFTs are never read.
+ */
 export async function collection(address: string) {
   return withStore((db) => {
-    const items = db.credentials
-      .filter((item) => item.holder === address)
-      .map((item) => ({
-        ...item,
-        huntName: db.hunts.find((hunt) => hunt.id === item.huntId)?.name ?? "",
-        joinCode: db.hunts.find((hunt) => hunt.id === item.huntId)?.joinCode ?? "",
-      }));
+    const items = db.credentials.flatMap((item) => {
+      if (item.holder !== address || !isB0xCredentialKind(item.kind)) return [];
+      const hunt = db.hunts.find((candidate) => candidate.id === item.huntId);
+      const stage = item.taskId
+        ? hunt?.stages.find((candidate) => candidate.tasks.some((task) => task.id === item.taskId))
+        : undefined;
+      return [
+        {
+          id: item.id,
+          kind: item.kind,
+          title: item.title,
+          description: item.description,
+          huntId: item.huntId,
+          huntName: hunt?.name ?? "",
+          joinCode: hunt?.joinCode ?? "",
+          stageTitle: stage?.title ?? "",
+          issuer: hunt?.creatorName ?? "",
+          issuedAt: item.issuedAt,
+          expiresAt: null,
+          revokedAt: null,
+          ephemeral: false,
+          txHash: item.txHash,
+          chainName: ocp.target.name,
+          chainId: ocp.target.chainId,
+          chainMode: "mock" as const,
+        },
+      ];
+    });
     return { items };
   }, false);
 }
