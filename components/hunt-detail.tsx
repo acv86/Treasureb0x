@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useApp, useT } from "@/components/providers";
+import { PrizeImage } from "@/components/prize-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,7 +200,12 @@ export function HuntDetail({ code }: { code: string }) {
         </p>
       )}
 
-      <section className="rounded-3xl bg-accent/70 p-4">
+      <section className="space-y-3 rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
+        <PrizeImage
+          src={hunt.prize.image}
+          alt={hunt.prize.title}
+          className={hunt.prizeClaimed ? "ring-2 ring-primary" : undefined}
+        />
         <p className="text-sm text-muted-foreground">{tr("stepPrize")}</p>
         <h2 className="font-heading text-2xl">{hunt.prize.title}</h2>
         <p className="mt-1">{hunt.prize.description}</p>

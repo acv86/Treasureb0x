@@ -34,7 +34,12 @@ export type StoredHunt = {
   playerCap: number;
   sample: boolean;
   publishTx: string;
-  prize: { title: string; description: string };
+  prize: {
+    title: string;
+    description: string;
+    /** https URL or data:image URI. Empty means the generated default. */
+    image?: string | null;
+  };
   stages: StoredStage[];
 };
 

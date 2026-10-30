@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { CHAIN } from "../limits";
+import { prizeTokenUri } from "../prize-image";
 import type {
   MintMarkInput,
   MintPrizeInput,
@@ -49,10 +50,18 @@ export function createMockOcp(): OcpClient {
       );
     },
     async mintPrize(input: MintPrizeInput) {
-      return credential(
-        { ...input, kind: "prize", description: input.description },
-        `prize:${input.huntId}:${input.holder}:${input.title}`,
-      );
+      return {
+        ...credential(
+          { holder: input.holder, huntId: input.huntId, kind: "prize", title: input.title, description: input.description },
+          `prize:${input.huntId}:${input.holder}:${input.title}`,
+        ),
+        tokenURI: prizeTokenUri({
+          name: input.title,
+          description: input.description,
+          huntTitle: input.huntTitle,
+          customImage: input.customImage,
+        }),
+      };
     },
   };
 }
