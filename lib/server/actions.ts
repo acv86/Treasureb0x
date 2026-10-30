@@ -2,6 +2,7 @@ import "server-only";
 
 import { verifyMessage } from "viem";
 import { hashCode, hashesEqual, isJoinCode, isStepCode, normalizeCode } from "../codes";
+import { locationIsSet, type SolutionMethod, type SpotLocation } from "../hunt-schema";
 import {
   allTasks,
   phaseAt,
@@ -37,6 +38,7 @@ function shapeOf(hunt: StoredHunt): HuntShape {
         id: task.id,
         title: task.title,
         instruction: task.instruction,
+        story: task.story ?? null,
         hint: task.hint,
       })),
     })),
@@ -286,9 +288,26 @@ export type CreateBody = {
   stages: {
     title: string;
     rule: { kind: "all" } | { kind: "atLeast"; n: number };
-    tasks: { title: string; instruction: string; code: string; hint?: string }[];
+    tasks: {
+      title: string;
+      instruction: string;
+      code: string;
+      hint?: string;
+      story?: string;
+      method?: SolutionMethod;
+      location?: { label?: string; lat?: number | null; lng?: number | null } | null;
+    }[];
   }[];
 };
+
+function readLocation(value: CreateBody["stages"][number]["tasks"][number]["location"]): SpotLocation | null {
+  if (!value || typeof value !== "object") return null;
+  const label = cleanText(value.label, 80);
+  const lat = typeof value.lat === "number" && Number.isFinite(value.lat) ? value.lat : null;
+  const lng = typeof value.lng === "number" && Number.isFinite(value.lng) ? value.lng : null;
+  const location = { label, lat, lng };
+  return locationIsSet(location) ? location : null;
+}
 
 function cleanText(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -327,14 +346,22 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
     for (const task of stage.tasks) {
       const taskTitle = cleanText(task.title, 60);
       const instruction = cleanText(task.instruction, 500);
+      const story = cleanText(task.story, 280);
       const code = normalizeCode(task.code ?? "");
       const hint = cleanText(task.hint, 200);
-      if (!taskTitle || !instruction || !isStepCode(code)) throw new ActionError("invalid");
+      const method = task.method === "choice" || task.method === "qr" ? task.method : "code";
+      const location = readLocation(task.location);
+      if (!taskTitle || !instruction || !isStepCode(code) || method !== "code" || !location) {
+        throw new ActionError("invalid");
+      }
       tasks.push({
         id: newId("step"),
         title: taskTitle,
         instruction,
+        story: story || null,
         hint: hint || null,
+        method,
+        location,
         codePlain: code,
         codeHash: await hashCode(code),
       });

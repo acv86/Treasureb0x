@@ -11,6 +11,8 @@ export type Task = {
   id: string;
   title: string;
   instruction: string;
+  /** Short flavour text. Players can skip it. Solving uses the instruction. */
+  story?: string | null;
   hint: string | null;
 };
 
@@ -37,6 +39,7 @@ export type PublicTask = {
   id: string;
   title: string | null;
   instruction: string | null;
+  story: string | null;
   hint: string | null;
   state: TaskState;
 };
@@ -115,12 +118,13 @@ export function openTaskIds(hunt: HuntShape, completed: ReadonlySet<string>): st
 
 function visibleTask(task: Task, state: TaskState): PublicTask {
   if (state === "locked") {
-    return { id: task.id, title: null, instruction: null, hint: null, state };
+    return { id: task.id, title: null, instruction: null, story: null, hint: null, state };
   }
   return {
     id: task.id,
     title: task.title,
     instruction: task.instruction,
+    story: task.story?.trim() ? task.story : null,
     hint: task.hint,
     state,
   };

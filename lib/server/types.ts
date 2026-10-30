@@ -1,4 +1,5 @@
 import type { StageRule, Structure } from "../domain";
+import type { SolutionMethod, SpotLocation } from "../hunt-schema";
 import type { OcpCredential } from "../ocp/types";
 import type { Ledger } from "../relayer";
 
@@ -6,7 +7,13 @@ export type StoredTask = {
   id: string;
   title: string;
   instruction: string;
+  /** Short flavour. Players can skip it. Null on hunts made before stories. */
+  story?: string | null;
   hint: string | null;
+  /** Typed code today. Choice and a QR photo are reserved. */
+  method?: SolutionMethod;
+  /** Empty until the creator names the place. Samples may leave it unset. */
+  location?: SpotLocation | null;
   /** Kept so the creator can see what to place in the world. Players never receive it. */
   codePlain: string;
   codeHash: string;
