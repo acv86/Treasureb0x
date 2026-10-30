@@ -40,7 +40,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-background md:my-4 md:min-h-[calc(100dvh-2rem)] md:overflow-hidden md:rounded-[2rem] md:shadow-2xl md:ring-1 md:ring-foreground/10">
+    <div className="app-shell mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-background md:my-4 md:min-h-[calc(100dvh-2rem)] md:overflow-hidden md:rounded-[2rem] md:shadow-2xl md:ring-1 md:ring-foreground/10">
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4">{children}</div>
       <nav className="grid grid-cols-4 gap-1 border-t bg-background/95 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
         {item("/hunts", tr("hunts"))}

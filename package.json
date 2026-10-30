@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 38471 -H 0.0.0.0",
     "lint": "eslint",
-    "test": "tsx --test lib/domain.test.ts lib/relayer.test.ts"
+    "test": "tsx --test lib/domain.test.ts lib/relayer.test.ts lib/i18n.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

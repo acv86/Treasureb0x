@@ -208,11 +208,11 @@ Where an earlier chat suggested something else, that alternative is listed. The 
 
 ## D21. Languages, direction, and backup words
 
-**Proposal.** The shell is translated into English, Chinese, Hindi, Spanish, French, Arabic, Bengali, Portuguese, Russian, and Japanese. Arabic is right to left. Backup words stay English in every language. Hunt text stays in the language the creator wrote. Sample hunts are English.
+**Proposal.** The shell is translated into English, Chinese, Hindi, Spanish, French, Arabic, Bengali, Portuguese, Russian, Japanese, and Danish. Arabic is right to left. Backup words stay English in every language. Hunt text stays in the language the creator wrote. Sample hunts stay in English unless that language has its own wording; Danish does.
 
 **Alternatives.** English only for this draft. Localized word lists. Machine-translating hunt text.
 
-**Reasoning.** The settings list named these ten languages. One word list avoids mixed backups. Authored hunt text is not the same as chrome.
+**Reasoning.** The settings list named these languages, and Danish was added beside them. One word list avoids mixed backups. Authored hunt text is not the same as chrome. Sample wording follows the language only when a translation is included.
 
 **Risks.** Translation quality needs a native pass. A player who cannot read the creator's language is stuck. English words on a non-English phone need the sentence that explains why.
 

@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { ClientError, getJson, signedPost, type HuntDetail as HuntDetailData } from "@/lib/client-api";
 import type { Structure } from "@/lib/domain";
 import { errorText, type CopyKey } from "@/lib/i18n";
+import { localizeSample } from "@/lib/sample-text";
 
 const structureKey: Record<Structure, CopyKey> = {
   serial: "serialName",
@@ -106,53 +107,56 @@ export function HuntDetail({ code }: { code: string }) {
 
   if (!hunt) return <p className="text-muted-foreground">{tr("loading")}</p>;
 
+  const view = localizeSample(prefs.lang, hunt);
+
   return (
     <div className="space-y-5 pb-4">
       <Link href="/hunts" className="text-sm text-primary">{tr("allHunts")}</Link>
       <header className="space-y-2">
         <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{tr(structureKey[hunt.structure])}</Badge>
-          {hunt.sample && <Badge>{tr("sample")}</Badge>}
+          <Badge variant="secondary">{tr(structureKey[view.structure])}</Badge>
+          {view.sample && <Badge>{tr("sample")}</Badge>}
         </div>
-        <h1 className="font-heading text-4xl text-balance">{hunt.name}</h1>
-        <p className="text-sm text-muted-foreground">{tr("byName", { name: hunt.creatorName })}</p>
-        <p>{hunt.description}</p>
+        <h1 className="font-heading text-4xl text-balance">{view.name}</h1>
+        <p className="text-sm text-muted-foreground">{tr("byName", { name: view.creatorName })}</p>
+        <p>{view.description}</p>
       </header>
 
-      {hunt.joined && (
+      {view.joined && (
         <div>
-          <p className="text-sm">{tr("ofSteps", { done: hunt.completedCount, total: hunt.totalCount })}</p>
-          <Progress value={hunt.completedCount} max={Math.max(hunt.totalCount, 1)} className="mt-2" />
+          <p className="text-sm">{tr("ofSteps", { done: view.completedCount, total: view.totalCount })}</p>
+          <Progress value={view.completedCount} max={Math.max(view.totalCount, 1)} className="mt-2" />
         </div>
       )}
 
-      {!hunt.joined && (
+      {!view.joined && (
         <Button
           className="h-12 w-full rounded-full text-base"
-          disabled={busy || hunt.phase === "ended"}
+          disabled={busy || view.phase === "ended"}
           onClick={() =>
-            void act(`/api/hunts/${hunt.joinCode}/join`, { displayName: session?.displayName }, { action: "join" })
+            void act(`/api/hunts/${view.joinCode}/join`, { displayName: session?.displayName }, { action: "join" })
           }
         >
           {tr("joinThis")}
         </Button>
       )}
 
-      {hunt.phase === "upcoming" && <p>{tr("notOpenYet")}</p>}
-      {hunt.phase === "ended" && !hunt.prizeReady && <p>{tr("huntEnded")}</p>}
+      {view.phase === "upcoming" && <p>{tr("notOpenYet")}</p>}
+      {view.phase === "ended" && !view.prizeReady && <p>{tr("huntEnded")}</p>}
 
-      {hunt.joined &&
-        hunt.stages.map((stage, index) => (
+      {view.joined &&
+        view.stages.map((stage, index) => (
           <section key={stage.id} className="space-y-3">
-            {hunt.structure === "hybrid" && (
+            {view.structure === "hybrid" && (
               <h2 className="font-heading text-xl">
                 {stage.state === "locked"
                   ? tr("stageHidden", { n: index + 1 })
                   : stage.title || tr("stageLabel", { n: index + 1 })}
               </h2>
             )}
+            <div className="hunt-cards space-y-3">
             {stage.tasks.map((task) => (
-              <article key={task.id} className="rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
+              <article key={task.id} className="tint-card rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-heading text-lg">{task.title}</h3>
                   <Badge variant={task.state === "done" ? "default" : "outline"}>
@@ -161,7 +165,7 @@ export function HuntDetail({ code }: { code: string }) {
                 </div>
                 {task.instruction && <p className="mt-2">{task.instruction}</p>}
                 {task.hint && <p className="mt-2 text-sm text-muted-foreground">{task.hint}</p>}
-                {task.state === "open" && hunt.phase === "open" && (
+                {task.state === "open" && view.phase === "open" && (
                   <form
                     className={`mt-3 flex gap-2 ${shake ? "shake" : ""}`}
                     key={`${task.id}-${shake}`}
@@ -169,7 +173,7 @@ export function HuntDetail({ code }: { code: string }) {
                       event.preventDefault();
                       const stepCode = drafts[task.id] ?? "";
                       void act(
-                        `/api/hunts/${hunt.joinCode}/unlock`,
+                        `/api/hunts/${view.joinCode}/unlock`,
                         { taskId: task.id, code: stepCode },
                         { action: "unlock", task: task.id, stepCode },
                       );
@@ -190,30 +194,31 @@ export function HuntDetail({ code }: { code: string }) {
                 )}
               </article>
             ))}
+            </div>
           </section>
         ))}
 
-      {hunt.joined && hunt.hiddenStepCount > 0 && (
+      {view.joined && view.hiddenStepCount > 0 && (
         <p className="text-sm text-muted-foreground">
-          {hunt.hiddenStepCount === 1 ? tr("hiddenOne") : tr("hiddenSteps", { n: hunt.hiddenStepCount })}
+          {view.hiddenStepCount === 1 ? tr("hiddenOne") : tr("hiddenSteps", { n: view.hiddenStepCount })}
         </p>
       )}
 
       <section className="rounded-3xl bg-accent/70 p-4">
         <p className="text-sm text-muted-foreground">{tr("stepPrize")}</p>
-        <h2 className="font-heading text-2xl">{hunt.prize.title}</h2>
-        <p className="mt-1">{hunt.prize.description}</p>
-        {hunt.prizeClaimed && <p className="mt-3 text-sm">{tr("kept")}</p>}
-        {hunt.joined && hunt.prizeReady && !hunt.prizeClaimed && (
+        <h2 className="font-heading text-2xl">{view.prize.title}</h2>
+        <p className="mt-1">{view.prize.description}</p>
+        {view.prizeClaimed && <p className="mt-3 text-sm">{tr("kept")}</p>}
+        {view.joined && view.prizeReady && !view.prizeClaimed && (
           <Button
             className="mt-4 h-12 w-full rounded-full text-base"
             disabled={busy}
-            onClick={() => void act(`/api/hunts/${hunt.joinCode}/claim`, {}, { action: "claim" })}
+            onClick={() => void act(`/api/hunts/${view.joinCode}/claim`, {}, { action: "claim" })}
           >
             {tr("claim")}
           </Button>
         )}
-        {hunt.prizeClaimed && (
+        {view.prizeClaimed && (
           <Link href="/prizes" className="mt-4 flex h-12 items-center justify-center rounded-full border border-border bg-background">
             {tr("seePrizes")}
           </Link>

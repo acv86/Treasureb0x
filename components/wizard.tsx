@@ -20,7 +20,7 @@ import { ClientError, getJson, signedPost, type HomePayload } from "@/lib/client
 import { isStepCode, randomJoinCode } from "@/lib/codes";
 import type { Structure } from "@/lib/domain";
 import { LIMITS } from "@/lib/limits";
-import { errorText, type CopyKey } from "@/lib/i18n";
+import { errorText, formatDateTime, type CopyKey } from "@/lib/i18n";
 
 type DraftTask = { key: string; title: string; instruction: string; code: string; hint: string };
 type DraftStage = {
@@ -358,7 +358,7 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
               <p>{draft.description}</p>
               {draft.structure && <p>{tr(structureLine[draft.structure])}</p>}
               <p>{tr("stepPrize")}: {draft.prizeTitle}</p>
-              <p>{draft.timed ? `${draft.startsAt || "…"} → ${draft.endsAt || "…"}` : tr("noLimit")}</p>
+              <p>{draft.timed ? `${formatDateTime(prefs.lang, draft.startsAt)} → ${formatDateTime(prefs.lang, draft.endsAt)}` : tr("noLimit")}</p>
               <Label htmlFor="join-edit"><Term tip={tr("huntCodeHelp")}>{tr("huntCode")}</Term></Label>
               <Input id="join-edit" value={draft.joinCode} onChange={(event) => setDraft({ ...draft, joinCode: event.target.value.toUpperCase() })} className="h-12 rounded-2xl px-3 text-base tracking-widest" />
               <p>{tr("playersNeverPay")}</p>
