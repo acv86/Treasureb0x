@@ -7,6 +7,7 @@
 
 import { isStepCode } from "./codes";
 import { ruleHolds, type StageRule, type Structure } from "./domain";
+import { placeIsReady, resolveProximity } from "./maps";
 
 export const SOLUTION_METHODS = ["code", "choice", "qr"] as const;
 export type SolutionMethod = (typeof SOLUTION_METHODS)[number];
@@ -52,6 +53,10 @@ export type HuntDraft = {
   description: string;
   prizeTitle: string;
   prizeAbout: string;
+  /** Off by default. On means every stage needs a map pin. */
+  mapBased: boolean;
+  /** The 100 m rule. Ignored unless mapBased is on. */
+  proximity: boolean;
   stages: HuntStageDraft[];
 };
 
@@ -68,10 +73,11 @@ export const huntSchema = {
     story: 280,
     instruction: 500,
     hint: 200,
-    place: 80,
+    place: 200,
   },
   code: { min: 4, max: 24 },
-  location: { requiredToPublish: true, templateDefault: null },
+  location: { textWhenMapOff: true, pinWhenMapOn: true, templateDefault: null, mapBasedDefault: false },
+  proximityMetres: 100,
 } as const;
 
 export type HuntIssue =
@@ -91,15 +97,13 @@ function tooLong(value: string, max: number): boolean {
   return value.trim().length > max;
 }
 
-export function locationIsSet(location: SpotLocation | null | undefined): boolean {
-  if (!location) return false;
-  if (location.label.trim().length > 0) return true;
-  return (
-    typeof location.lat === "number" &&
-    typeof location.lng === "number" &&
-    Number.isFinite(location.lat) &&
-    Number.isFinite(location.lng)
-  );
+/** Keep written clues when the map is switched on, and drop the 100 m rule when it is switched off. */
+export function applyMapBased<T extends { mapBased: boolean; proximity: boolean }>(draft: T, mapBased: boolean): T {
+  return { ...draft, mapBased, proximity: mapBased ? draft.proximity : false };
+}
+
+export function proximityFor(draft: { mapBased: boolean; proximity: boolean }): { enabled: boolean; metres: number | null } {
+  return resolveProximity(draft.mapBased, draft.proximity);
 }
 
 export function draftTasks(draft: HuntDraft): HuntTaskDraft[] {
@@ -138,7 +142,7 @@ export function validateHuntShape(draft: HuntDraft): HuntIssue[] {
       }
       if (!SOLUTION_METHODS.includes(task.method)) issues.add("method");
       if (task.method === "code" && !isStepCode(task.code)) issues.add("code");
-      if (task.location && !locationIsSet(task.location)) issues.add("location");
+      if (task.location && pinHalfSet(task.location)) issues.add("location");
       if (task.location && tooLong(task.location.label, huntSchema.limits.place)) issues.add("text");
     }
   }
@@ -159,14 +163,21 @@ export function validateHunt(draft: HuntDraft): HuntIssue[] {
 }
 
 export function missingLocations(draft: HuntDraft): number {
-  return draftTasks(draft).filter((task) => !locationIsSet(task.location)).length;
+  return draftTasks(draft).filter((task) => !placeIsReady(task.location, draft.mapBased)).length;
 }
 
-/** Publishing needs a valid hunt, a typed code on every spot, and a place on every spot. */
+/** Publishing needs a valid hunt, a typed code on every spot, and a place or a pin on every spot. */
 export function canPublish(draft: HuntDraft): boolean {
   if (validateHunt(draft).length > 0) return false;
   if (missingLocations(draft) > 0) return false;
+  if (draft.proximity && !proximityFor(draft).enabled) return false;
   return draftTasks(draft).every((task) => task.method === "code");
+}
+
+function pinHalfSet(location: SpotLocation): boolean {
+  const lat = typeof location.lat === "number" && Number.isFinite(location.lat);
+  const lng = typeof location.lng === "number" && Number.isFinite(location.lng);
+  return lat !== lng;
 }
 
 export function sentenceCount(text: string): number {

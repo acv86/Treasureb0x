@@ -2,7 +2,8 @@ import "server-only";
 
 import { verifyMessage } from "viem";
 import { hashCode, hashesEqual, isJoinCode, isStepCode, normalizeCode } from "../codes";
-import { locationIsSet, type SolutionMethod, type SpotLocation } from "../hunt-schema";
+import { proximityFor, type SolutionMethod, type SpotLocation } from "../hunt-schema";
+import { pinIsSet, textPlaceIsSet } from "../maps";
 import {
   allTasks,
   phaseAt,
@@ -298,15 +299,20 @@ export type CreateBody = {
       location?: { label?: string; lat?: number | null; lng?: number | null } | null;
     }[];
   }[];
+  mapBased?: boolean;
+  proximity?: boolean;
 };
 
 function readLocation(value: CreateBody["stages"][number]["tasks"][number]["location"]): SpotLocation | null {
   if (!value || typeof value !== "object") return null;
-  const label = cleanText(value.label, 80);
-  const lat = typeof value.lat === "number" && Number.isFinite(value.lat) ? value.lat : null;
-  const lng = typeof value.lng === "number" && Number.isFinite(value.lng) ? value.lng : null;
-  const location = { label, lat, lng };
-  return locationIsSet(location) ? location : null;
+  const label = cleanText(value.label, 200);
+  const rawLat = typeof value.lat === "number" && Number.isFinite(value.lat) ? value.lat : null;
+  const rawLng = typeof value.lng === "number" && Number.isFinite(value.lng) ? value.lng : null;
+  const pair = rawLat !== null && rawLng !== null && rawLat >= -90 && rawLat <= 90 && rawLng >= -180 && rawLng <= 180;
+  const lat = pair ? rawLat : null;
+  const lng = pair ? rawLng : null;
+  if (!label && lat === null && lng === null) return null;
+  return { label, lat, lng };
 }
 
 function cleanText(value: unknown, max: number): string {
@@ -336,6 +342,8 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
   if (body.endsAt && !Number.isFinite(endsAt)) throw new ActionError("invalid");
   if (startsAt !== null && endsAt !== null && endsAt <= startsAt) throw new ActionError("invalid");
   if (!Array.isArray(body.stages) || body.stages.length === 0) throw new ActionError("invalid");
+  const mapBased = body.mapBased === true;
+  const proximity = proximityFor({ mapBased, proximity: body.proximity === true });
 
   const stages: StoredStage[] = [];
   for (const stage of body.stages) {
@@ -351,7 +359,8 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
       const hint = cleanText(task.hint, 200);
       const method = task.method === "choice" || task.method === "qr" ? task.method : "code";
       const location = readLocation(task.location);
-      if (!taskTitle || !instruction || !isStepCode(code) || method !== "code" || !location) {
+      const placeOk = mapBased ? pinIsSet(location) : textPlaceIsSet(location);
+      if (!taskTitle || !instruction || !isStepCode(code) || method !== "code" || !placeOk || !location) {
         throw new ActionError("invalid");
       }
       tasks.push({
@@ -397,6 +406,8 @@ export async function createHunt(actor: SignedActor, body: CreateBody) {
       playerCap: LIMITS.playersPerHunt,
       sample: false,
       publishTx: "",
+      mapBased,
+      proximityMetres: proximity.metres,
       prize: { title: prizeTitle, description: prizeAbout },
       stages,
     };

@@ -672,6 +672,8 @@ export function toHuntDraft(
     description: text(template.intro, lang),
     prizeTitle: text(template.prizeTitle, lang),
     prizeAbout: text(template.ending, lang),
+    mapBased: false,
+    proximity: false,
     stages: huntStages,
   };
 }

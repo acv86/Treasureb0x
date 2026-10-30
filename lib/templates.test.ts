@@ -90,6 +90,8 @@ describe("hunt templates", () => {
   it("starts with empty stage locations and refuses to publish until they are set", () => {
     for (const template of HUNT_TEMPLATES) {
       const draft = toHuntDraft(template, "en");
+      assert.equal(draft.mapBased, false);
+      assert.equal(draft.proximity, false);
       const spots = draft.stages.flatMap((stage) => stage.tasks);
       assert.ok(spots.length >= 3, template.id);
       assert.equal(spots.every((task) => task.location === null), true, template.id);

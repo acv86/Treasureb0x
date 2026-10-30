@@ -41,6 +41,10 @@ export type StoredHunt = {
   playerCap: number;
   sample: boolean;
   publishTx: string;
+  /** Absent on older hunts. Treated as a written-clue hunt. */
+  mapBased?: boolean;
+  /** 100 when the proximity rule is on. Only set for map-based hunts. */
+  proximityMetres?: number | null;
   prize: { title: string; description: string };
   stages: StoredStage[];
 };

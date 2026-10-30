@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { StageMap } from "@/components/stage-map";
 import { Term } from "@/components/term";
 import { useApp, useT } from "@/components/providers";
 import { Button } from "@/components/ui/button";
@@ -20,12 +21,15 @@ import { ClientError, getJson, signedPost, type HomePayload } from "@/lib/client
 import { randomJoinCode } from "@/lib/codes";
 import type { Structure } from "@/lib/domain";
 import {
+  applyMapBased,
   missingLocations,
   validateHuntShape,
   type HuntDraft,
   type SolutionMethod,
   type SpotLocation,
 } from "@/lib/hunt-schema";
+import { pinIsSet, placeIsReady } from "@/lib/maps";
+import { placeText } from "@/lib/place-copy";
 import { LIMITS } from "@/lib/limits";
 import { errorText, type CopyKey } from "@/lib/i18n";
 import {
@@ -67,6 +71,8 @@ type Draft = {
   birthdayName: string;
   birthdayAge: string;
   dogName: string;
+  mapBased: boolean;
+  proximity: boolean;
   structure: Structure | null;
   name: string;
   description: string;
@@ -112,6 +118,8 @@ function emptyDraft(): Draft {
     birthdayName: "",
     birthdayAge: "",
     dogName: "",
+    mapBased: false,
+    proximity: false,
     structure: null,
     name: "",
     description: "",
@@ -123,6 +131,14 @@ function emptyDraft(): Draft {
     joinCode: "",
     stages: [stage("stage-1", "", 2)],
   };
+}
+
+function keptLocation(location: SpotLocation | null): SpotLocation | null {
+  if (!location) return null;
+  const label = location.label.trim();
+  const paired = location.lat !== null && location.lng !== null;
+  if (!label && !paired) return null;
+  return { label, lat: paired ? location.lat : null, lng: paired ? location.lng : null };
 }
 
 function fillsOf(draft: Draft): StoryFills {
@@ -139,6 +155,8 @@ function applyTemplateOnto(current: Draft, id: string, lang: TemplateLang, ageBa
     templateId: id,
     templateLang: lang,
     ageBand,
+    mapBased: same ? current.mapBased : false,
+    proximity: same && current.mapBased ? current.proximity : false,
     structure: hunt.structure,
     name: hunt.name,
     description: hunt.description,
@@ -177,6 +195,8 @@ function toSchema(draft: Draft): HuntDraft {
     description: fillTokens(draft.description, fills, lang),
     prizeTitle: fillTokens(draft.prizeTitle, fills, lang),
     prizeAbout: fillTokens(draft.prizeAbout, fills, lang),
+    mapBased: draft.mapBased,
+    proximity: draft.mapBased ? draft.proximity : false,
     stages: draft.stages.map((item) => ({
       title: fillTokens(item.title, fills, lang),
       rule: item.ruleKind === "atLeast" ? { kind: "atLeast" as const, n: item.atLeast } : { kind: "all" as const },
@@ -187,9 +207,7 @@ function toSchema(draft: Draft): HuntDraft {
         hint: entry.hint,
         method: entry.method,
         code: entry.code,
-        location: entry.location?.label.trim()
-          ? { label: entry.location.label.trim(), lat: entry.location.lat, lng: entry.location.lng }
-          : null,
+        location: keptLocation(entry.location),
         prompt: entry.prompt,
         spotNote: entry.spotNote,
       })),
@@ -280,6 +298,11 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
     setDraft((current) => ({ ...emptyDraft(), templateLang: current.templateLang }));
   }
 
+  function setMapMode(mapBased: boolean) {
+    setError("");
+    setDraft((current) => applyMapBased(current, mapBased));
+  }
+
   function chooseStoryLang(lang: TemplateLang) {
     setError("");
     setDraft((current) =>
@@ -317,7 +340,7 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
     if (issues.includes("tasks")) return tr("needOne");
     if (issues.includes("rule")) return tr("rulesNeed");
     if (issues.includes("text") || issues.includes("code") || issues.includes("method")) return tr("eachCode");
-    if (missingLocations(hunt) > 0) return tr("locationNeeded");
+    if (missingLocations(hunt) > 0) return placeText(draft.templateLang, draft.mapBased ? "pinNeeded" : "textNeeded");
     return "";
   }
 
@@ -359,6 +382,8 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
           endsAt: draft.timed && draft.endsAt ? new Date(draft.endsAt).toISOString() : null,
           displayName: session.displayName,
           prize: { title: schema.prizeTitle, description: schema.prizeAbout },
+          mapBased: schema.mapBased,
+          proximity: schema.proximity,
           stages: schema.stages.map((item) => ({
             title: item.title || tr("stageLabel", { n: 1 }),
             rule: item.rule,
@@ -409,6 +434,13 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
           {!confirmClose && step === 0 && (
             <div className="space-y-4">
+              <MapModeCard
+                lang={draft.templateLang}
+                mapBased={draft.mapBased}
+                proximity={draft.proximity}
+                onMapBased={setMapMode}
+                onProximity={(proximity) => setDraft((current) => ({ ...current, proximity }))}
+              />
               <section className="space-y-3 rounded-3xl bg-accent/50 p-4" data-testid="templates-section">
                 <h2 className="font-heading text-xl">{tr("templatesSection")}</h2>
                 <p className="text-sm text-muted-foreground">{tr("templatesHelp")}</p>
@@ -538,6 +570,14 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
           {!confirmClose && step === 2 && (
             <div className="space-y-4" data-testid="stage-editor">
+              <MapModeCard
+                lang={draft.templateLang}
+                mapBased={draft.mapBased}
+                proximity={draft.proximity}
+                onMapBased={setMapMode}
+                onProximity={(proximity) => setDraft((current) => ({ ...current, proximity }))}
+                compact
+              />
               {selectedTemplate?.kids && (
                 <div className="space-y-2">
                   <p className="text-sm">{tr("ageBand")}</p>
@@ -566,13 +606,15 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
                 <div key={entry.key} className="space-y-3 rounded-3xl bg-card p-3 ring-1 ring-foreground/10" data-testid="stage-card">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-heading text-lg">{tr("stageLabel", { n: taskIndex + 1 })}</p>
-                    {!entry.location?.label.trim() && <p className="text-sm font-medium text-destructive">{tr("locationMissing")}</p>}
+                    {!placeIsReady(entry.location, draft.mapBased) && <p className="text-sm font-medium text-destructive">{placeText(draft.templateLang, draft.mapBased ? "pinMissing" : "whereMissing")}</p>}
                   </div>
                   <SpotCard
                     entry={entry}
                     index={taskIndex}
                     total={draft.stages[0].tasks.length}
                     tr={tr}
+                    lang={draft.templateLang}
+                    mapBased={draft.mapBased}
                     onChange={(patch) => updateTask(draft.stages[0].key, entry.key, patch)}
                     onMove={(direction) => moveTask(draft.stages[0].key, taskIndex, direction)}
                     onRemove={() => removeTask(draft.stages[0].key, entry.key)}
@@ -583,12 +625,12 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
                 <Button type="button" variant="outline" className="w-full rounded-full" onClick={() => addTask(draft.stages[0].key)}>{tr("addStep")}</Button>
               )}
               {draft.structure === "hybrid" && draft.stages.map((item, stageIndex) => {
-                const stageMissing = item.tasks.some((entry) => !entry.location?.label.trim());
+                const stageMissing = item.tasks.some((entry) => !placeIsReady(entry.location, draft.mapBased));
                 return (
                   <div key={item.key} className="space-y-3 rounded-3xl bg-card p-3 ring-1 ring-foreground/10" data-testid="stage-card">
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-heading text-lg">{tr("stageLabel", { n: stageIndex + 1 })}</p>
-                      {stageMissing && <p className="text-sm font-medium text-destructive">{tr("locationMissing")}</p>}
+                      {stageMissing && <p className="text-sm font-medium text-destructive">{placeText(draft.templateLang, draft.mapBased ? "pinMissing" : "whereMissing")}</p>}
                     </div>
                     {draft.structure === "hybrid" && (
                       <>
@@ -615,6 +657,8 @@ export function Wizard({ open, onOpenChange }: { open: boolean; onOpenChange: (o
                         index={taskIndex}
                         total={item.tasks.length}
                         tr={tr}
+                        lang={draft.templateLang}
+                        mapBased={draft.mapBased}
                         onChange={(patch) => updateTask(item.key, entry.key, patch)}
                         onMove={(direction) => moveTask(item.key, taskIndex, direction)}
                         onRemove={() => removeTask(item.key, entry.key)}
@@ -758,6 +802,8 @@ function SpotCard({
   index,
   total,
   tr,
+  lang,
+  mapBased,
   onChange,
   onMove,
   onRemove,
@@ -766,11 +812,14 @@ function SpotCard({
   index: number;
   total: number;
   tr: (key: CopyKey, vars?: Record<string, string | number>) => string;
+  lang: TemplateLang;
+  mapBased: boolean;
   onChange: (patch: Partial<DraftTask>) => void;
   onMove: (direction: number) => void;
   onRemove: () => void;
 }) {
-  const placed = Boolean(entry.location?.label.trim());
+  const ready = placeIsReady(entry.location, mapBased);
+  const say = (key: Parameters<typeof placeText>[1]) => placeText(lang, key);
   return (
     <div className="space-y-2 border-t border-border pt-3" data-testid="spot-card">
       <div className="flex items-center justify-between gap-2">
@@ -783,22 +832,53 @@ function SpotCard({
       </div>
       <Input value={entry.title} placeholder={tr("stepTitle")} onChange={(event) => onChange({ title: event.target.value })} className="h-11 rounded-2xl px-3" />
       <div
-        data-testid={placed ? "location-set" : "location-missing"}
-        className={placed ? "space-y-2 rounded-2xl bg-accent/70 p-3" : "space-y-2 rounded-2xl border border-dashed border-destructive/70 bg-destructive/5 p-3"}
+        data-testid={mapBased ? (ready ? "pin-set" : "pin-missing") : ready ? "location-set" : "location-missing"}
+        className={ready ? "space-y-2 rounded-2xl bg-accent/70 p-3" : "space-y-2 rounded-2xl border border-dashed border-destructive/70 bg-destructive/5 p-3"}
       >
-        <div className="grid h-16 place-items-center rounded-xl bg-muted text-sm text-muted-foreground">{tr("mapPlaceholder")}</div>
-        {!placed && <p className="font-medium text-destructive">{tr("locationMissing")}</p>}
-        {!placed && <p className="text-sm text-muted-foreground">{tr("locationPrompt")}</p>}
+        {mapBased ? (
+          <>
+            {!ready && <p className="font-medium text-destructive">{say("pinMissing")}</p>}
+            <p className="text-sm text-muted-foreground">{say("pinPrompt")}</p>
+            <p className="text-sm text-muted-foreground">{say("tapMap")}</p>
+            <StageMap
+              lat={entry.location?.lat ?? null}
+              lng={entry.location?.lng ?? null}
+              googlePending={say("googlePending")}
+              latitudeLabel={say("latitude")}
+              longitudeLabel={say("longitude")}
+              onPin={(pin) =>
+                onChange({
+                  location: { label: entry.location?.label ?? "", lat: pin.lat, lng: pin.lng },
+                })
+              }
+            />
+            {pinIsSet(entry.location) && entry.location && (
+              <p className="text-sm" data-testid="pin-coordinates">
+                {entry.location.lat?.toFixed(5)}, {entry.location.lng?.toFixed(5)}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">{say("noteHelp")}</p>
+          </>
+        ) : (
+          <>
+            {!ready && <p className="font-medium text-destructive">{say("whereMissing")}</p>}
+            <p className="text-sm">{say("wherePrompt")}</p>
+          </>
+        )}
         {entry.spotNote && <p className="text-sm">{tr("suggestedSpot", { spot: entry.spotNote })}</p>}
-        <Label htmlFor={`place-${entry.key}`}>{tr("locationLabel")}</Label>
+        <Label htmlFor={`place-${entry.key}`}>{mapBased ? say("noteLabel") : say("placeLabel")}</Label>
         <Input
           id={`place-${entry.key}`}
           value={entry.location?.label ?? ""}
-          placeholder={tr("locationPlaceholder")}
+          maxLength={200}
+          placeholder={mapBased ? say("noteLabel") : say("wherePlaceholder")}
           onChange={(event) => {
             const label = event.target.value;
+            const lat = entry.location?.lat ?? null;
+            const lng = entry.location?.lng ?? null;
+            const paired = lat !== null && lng !== null;
             onChange({
-              location: label.trim() ? { label, lat: entry.location?.lat ?? null, lng: entry.location?.lng ?? null } : null,
+              location: label.trim() || paired ? { label, lat, lng } : null,
             });
           }}
           className="h-11 rounded-2xl px-3"
@@ -821,5 +901,55 @@ function SpotCard({
         <button type="button" disabled className="h-11 rounded-full border border-border px-3 text-sm opacity-50">{tr("photoQr")} · {tr("comingSoon")}</button>
       </div>
     </div>
+  );
+}
+
+function MapModeCard({
+  lang,
+  mapBased,
+  proximity,
+  onMapBased,
+  onProximity,
+  compact = false,
+}: {
+  lang: TemplateLang;
+  mapBased: boolean;
+  proximity: boolean;
+  onMapBased: (on: boolean) => void;
+  onProximity: (on: boolean) => void;
+  compact?: boolean;
+}) {
+  const say = (key: Parameters<typeof placeText>[1]) => placeText(lang, key);
+  return (
+    <section className="space-y-3 rounded-3xl bg-card p-4 ring-1 ring-foreground/10" data-testid="map-mode">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1"
+          data-testid="map-based-toggle"
+          checked={mapBased}
+          onChange={(event) => onMapBased(event.target.checked)}
+        />
+        <span>
+          <span className="font-heading text-lg">{say("mapBased")}</span>
+          {!compact && <span className="mt-1 block text-sm text-muted-foreground">{say("mapBasedHelp")}</span>}
+        </span>
+      </label>
+      {mapBased && (
+        <label className="flex cursor-pointer items-start gap-3 border-t border-border pt-3">
+          <input
+            type="checkbox"
+            className="mt-1"
+            data-testid="proximity-rule"
+            checked={proximity}
+            onChange={(event) => onProximity(event.target.checked)}
+          />
+          <span>
+            <span className="font-medium">{say("proximity")}</span>
+            {!compact && <span className="mt-1 block text-sm text-muted-foreground">{say("proximityHelp")}</span>}
+          </span>
+        </label>
+      )}
+    </section>
   );
 }
