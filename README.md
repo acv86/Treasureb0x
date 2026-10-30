@@ -19,7 +19,7 @@ Open [http://127.0.0.1:38471](http://127.0.0.1:38471).
 npm test
 ```
 
-That checks the hunt rules (serial, parallel, hybrid) and the sponsored-action caps.
+That checks the hunt rules (serial, parallel, hybrid), the sponsored-action caps, and how Me filters and sorts b0x credentials.
 
 The product stub writes `data/store.json` on first use. That file is local and is not committed. Delete it to restore the three sample hunts and an empty pool.
 
@@ -30,7 +30,7 @@ The product stub writes `data/store.json` on first use. That file is local and i
 3. **Saturday market** (`MARKET`) is every step at once: `CRUST`, `STEM`, `NOON`.
 4. **Old mill** (`MILL`) is two stages: `WHEEL` and `CREEK`, then either `DUST` or `BARLEY`.
 5. **Create** walks the wizard. Review shows a covered private hunt, not a fee.
-6. **Prizes** holds marks and the prize. **You** holds the id, backup words, hunts you made, text size, theme, and language.
+6. **Prizes** holds marks and the prize. **Me** lists every b0x credential on this id (filter by type, hunt, and status; sort by newest, oldest, hunt name, or type), plus the id, backup words, hunts you made, text size, theme, and language. Other assets on the id are not shown.
 
 Public events (`/organise`) are a placeholder: arranged on the website, per event or for the year, with no payment in the app.
 

@@ -21,6 +21,8 @@ export type OcpCredential = {
   description: string;
   txHash: string;
   issuedAt: string;
+  /** Step a mark records. Prizes are hunt-level and omit this. */
+  taskId?: string;
 };
 
 export type PublishHuntInput = {

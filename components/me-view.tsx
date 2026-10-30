@@ -4,20 +4,23 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Appearance } from "@/components/appearance";
+import { CredentialsOverview } from "@/components/credentials-overview";
 import { useApp, useT } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ClientError, getJson, signedPost, type MineHunt, type ReviewNotes } from "@/lib/client-api";
+import { ClientError, getJson, signedPost, type CollectionItem, type MineHunt, type ReviewNotes } from "@/lib/client-api";
 import { clearSession, loadVault, unseal } from "@/lib/identity";
 import { errorText } from "@/lib/i18n";
 
-export function YouView() {
+export function MeView() {
   const { session, setSession, prefs } = useApp();
   const tr = useT();
   const router = useRouter();
   const [hunts, setHunts] = useState<MineHunt[] | null>(null);
   const [review, setReview] = useState<ReviewNotes | null>(null);
+  const [items, setItems] = useState<CollectionItem[] | null>(null);
   const [error, setError] = useState(false);
+  const [credError, setCredError] = useState(false);
   const [words, setWords] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [wordError, setWordError] = useState("");
@@ -25,7 +28,8 @@ export function YouView() {
 
   function load() {
     if (!session) return Promise.resolve();
-    return getJson<{ hunts: MineHunt[]; review: ReviewNotes }>(`/api/mine?address=${session.address}`).then(
+    const address = session.address;
+    const mine = getJson<{ hunts: MineHunt[]; review: ReviewNotes }>(`/api/mine?address=${address}`).then(
       (payload) => {
         setHunts(payload.hunts);
         setReview(payload.review);
@@ -33,12 +37,21 @@ export function YouView() {
       },
       () => setError(true),
     );
+    const credentials = getJson<{ items: CollectionItem[] }>(`/api/collection?address=${address}`).then(
+      (payload) => {
+        setItems(payload.items);
+        setCredError(false);
+      },
+      () => setCredError(true),
+    );
+    return Promise.all([mine, credentials]).then(() => undefined);
   }
 
   useEffect(() => {
     if (!session) return;
     let live = true;
-    void getJson<{ hunts: MineHunt[]; review: ReviewNotes }>(`/api/mine?address=${session.address}`).then(
+    const address = session.address;
+    void getJson<{ hunts: MineHunt[]; review: ReviewNotes }>(`/api/mine?address=${address}`).then(
       (payload) => {
         if (!live) return;
         setHunts(payload.hunts);
@@ -47,6 +60,16 @@ export function YouView() {
       },
       () => {
         if (live) setError(true);
+      },
+    );
+    void getJson<{ items: CollectionItem[] }>(`/api/collection?address=${address}`).then(
+      (payload) => {
+        if (!live) return;
+        setItems(payload.items);
+        setCredError(false);
+      },
+      () => {
+        if (live) setCredError(true);
       },
     );
     return () => {
@@ -59,9 +82,11 @@ export function YouView() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-sm text-muted-foreground">{tr("you")}</p>
+        <p className="text-sm text-muted-foreground">{tr("me")}</p>
         <h1 className="font-heading text-4xl">{session?.displayName}</h1>
       </header>
+
+      <CredentialsOverview items={items} error={credError} onRetry={() => void load()} />
 
       <section className="space-y-2 rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
         <h2 className="font-heading text-xl">{tr("yourId")}</h2>

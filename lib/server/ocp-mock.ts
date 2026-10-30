@@ -20,7 +20,14 @@ function txHash(seed: string): string {
 }
 
 function credential(
-  input: { holder: string; huntId: string; kind: "mark" | "prize"; title: string; description: string },
+  input: {
+    holder: string;
+    huntId: string;
+    kind: "mark" | "prize";
+    title: string;
+    description: string;
+    taskId?: string;
+  },
   seed: string,
 ): OcpCredential {
   const issuedAt = new Date().toISOString();
@@ -33,6 +40,7 @@ function credential(
     description: input.description,
     txHash: txHash(seed),
     issuedAt,
+    ...(input.taskId ? { taskId: input.taskId } : {}),
   };
 }
 
@@ -44,7 +52,14 @@ export function createMockOcp(): OcpClient {
     },
     async mintMark(input: MintMarkInput) {
       return credential(
-        { ...input, kind: "mark" },
+        {
+          holder: input.holder,
+          huntId: input.huntId,
+          kind: "mark",
+          title: input.title,
+          description: input.description,
+          taskId: input.taskId,
+        },
         `mark:${input.huntId}:${input.taskId}:${input.holder}`,
       );
     },

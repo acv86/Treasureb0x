@@ -53,7 +53,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {tr("create")}
         </button>
         {item("/prizes", tr("prizes"))}
-        {item("/you", tr("you"))}
+        {item("/me", tr("me"))}
       </nav>
       <Wizard open={creating} onOpenChange={setCreating} />
     </div>

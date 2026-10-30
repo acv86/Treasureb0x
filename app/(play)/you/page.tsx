@@ -1,7 +1,7 @@
-import { YouView } from "@/components/you-view";
+import { redirect } from "next/navigation";
 
 export const instant = false;
 
 export default function YouPage() {
-  return <YouView />;
+  redirect("/me");
 }

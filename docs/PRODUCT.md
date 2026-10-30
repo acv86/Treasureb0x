@@ -22,7 +22,7 @@ The first screen is Login, Restore, or First use.
 
 The backup words are English even when the rest of the app is not. The screen says why. It also says that if the words are lost, nobody can bring back what that id holds.
 
-Appearance (language, theme, text size) is on the entry screen and again on You.
+Appearance (language, theme, text size) is on the entry screen and again on Me.
 
 ## Hunts
 
@@ -63,15 +63,17 @@ Create opens a wizard:
 
 A private creator may have 3 live hunts, each for up to 40 players. Those numbers are proposals. When none are left, the wizard points at Public events instead of taking payment.
 
-The creator is joined automatically, so they can walk the hunt. On You they can see the codes to place in the world, the player count, and end the hunt. Ending stops new joins and new steps. A prize already ready can still be claimed.
+The creator is joined automatically, so they can walk the hunt. On Me they can see the codes to place in the world, the player count, and end the hunt. Ending stops new joins and new steps. A prize already ready can still be claimed.
 
 ## Prizes
 
 Prizes are the things kept at the end. Marks are the things kept per step. Both are digital. There is no physical handover in this draft.
 
-## You
+## Me
 
 Name, id (copyable, easy to ignore), backup words behind the device code, hunts you made, appearance, and Lock.
+
+The same screen lists the b0x credentials on this id. This draft issues two kinds: a mark for each opened step, and a prize when one is claimed. Joining a hunt and publishing one do not mint a separate credential. Filters cover type, hunt, and status (active, expired, short-lived, revoked — the last three apply only when a record carries an end or a revocation). Sort covers newest, oldest, hunt name, and type. Search matches the title, hunt, stage, and issuer. Each row shows when it was issued, the hunt, the stage when the mark has one, who issued it, and the named network. A mock record is not linked as a chain receipt. Balances, unrelated tokens, and other NFTs are not read.
 
 Lock returns to the entry screen on this phone. It does not delete the backup.
 
