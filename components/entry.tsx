@@ -145,7 +145,7 @@ export function EntryScreen() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-background px-5 py-8 md:my-4 md:min-h-[calc(100dvh-2rem)] md:rounded-[2rem] md:px-6 md:shadow-2xl md:ring-1 md:ring-foreground/10">
+    <main className="app-shell mx-auto flex min-h-dvh w-full max-w-[440px] flex-col bg-background px-5 py-8 md:my-4 md:min-h-[calc(100dvh-2rem)] md:rounded-[2rem] md:px-6 md:shadow-2xl md:ring-1 md:ring-foreground/10">
       <header className="mb-8 flex items-start justify-between gap-3">
         <Logo />
         <span className="rounded-full bg-accent px-2.5 py-1 text-xs text-accent-foreground">{tr("preview")}</span>
@@ -153,7 +153,7 @@ export function EntryScreen() {
 
       {mode === "choose" && (
         <div className="flex flex-1 flex-col">
-          <p className="font-heading text-3xl leading-tight text-balance">{tr("tagline")}</p>
+          <p className="page-title font-heading text-3xl leading-tight text-balance">{tr("tagline")}</p>
           <div className="mt-8 space-y-3">
             <Button className="h-auto min-h-16 w-full justify-start rounded-2xl px-4 py-3 whitespace-normal text-left" onClick={() => { clearSession(); setCode(""); setError(""); setMode("login"); }}>
               <span className="block">

@@ -13,6 +13,7 @@ import { ClientError, getJson, signedPost, type HomePayload, type HuntCard, type
 import { errorText } from "@/lib/i18n";
 import type { Structure } from "@/lib/domain";
 import type { CopyKey } from "@/lib/i18n";
+import { localizeSample } from "@/lib/sample-text";
 
 const structureKey: Record<Structure, CopyKey> = {
   serial: "serialName",
@@ -128,27 +129,34 @@ export function HuntList() {
         )}
         {!error && !data && <p className="text-muted-foreground">{tr("loading")}</p>}
         {data && data.hunts.length === 0 && <p className="text-muted-foreground">{tr("emptyHunts")}</p>}
-        {data?.hunts.map((card) => (
-          <Link key={card.joinCode} href={`/hunts/${card.joinCode}`} className="block rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-heading text-xl">{card.name}</h3>
-                <p className="text-sm text-muted-foreground">{tr(structureKey[card.structure])}</p>
-              </div>
-              <Badge variant="secondary">{tr(statusKey(card))}</Badge>
-            </div>
-            <p className="mt-3 text-sm">{tr("ofSteps", { done: card.completedCount, total: card.totalCount })}</p>
-            <Progress value={card.completedCount} max={Math.max(card.totalCount, 1)} className="mt-2" />
-          </Link>
-        ))}
+        <div className="hunt-cards space-y-3">
+          {data?.hunts.map((card) => {
+            const shown = localizeSample(prefs.lang, card);
+            return (
+              <Link key={card.joinCode} href={`/hunts/${card.joinCode}`} className="tint-card block rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-heading text-xl">{shown.name}</h3>
+                    <p className="text-sm text-muted-foreground">{tr(structureKey[card.structure])}</p>
+                  </div>
+                  <Badge variant="secondary">{tr(statusKey(card))}</Badge>
+                </div>
+                <p className="mt-3 text-sm">{tr("ofSteps", { done: card.completedCount, total: card.totalCount })}</p>
+                <Progress value={card.completedCount} max={Math.max(card.totalCount, 1)} className="mt-2" />
+              </Link>
+            );
+          })}
+        </div>
       </section>
 
       {data && data.samples.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-heading text-xl">{tr("trySample")}</h2>
-          {data.samples.map((sample) => (
-            <SampleRow key={sample.joinCode} sample={sample} busy={busy} onJoin={() => void join(sample.joinCode)} />
-          ))}
+          <div className="hunt-cards space-y-3">
+            {data.samples.map((sample) => (
+              <SampleRow key={sample.joinCode} sample={sample} busy={busy} onJoin={() => void join(sample.joinCode)} />
+            ))}
+          </div>
         </section>
       )}
     </div>
@@ -157,18 +165,20 @@ export function HuntList() {
 
 function SampleRow({ sample, onJoin, busy }: { sample: SampleCard; onJoin: () => void; busy: boolean }) {
   const tr = useT();
+  const { prefs } = useApp();
+  const shown = localizeSample(prefs.lang, sample);
   return (
     <button
       type="button"
       onClick={onJoin}
       disabled={busy}
-      className="block w-full rounded-3xl bg-accent/60 p-4 text-start ring-1 ring-foreground/10"
+      className="tint-card block w-full rounded-3xl bg-accent/60 p-4 text-start ring-1 ring-foreground/10"
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-heading text-lg">{sample.name}</h3>
+        <h3 className="font-heading text-lg">{shown.name}</h3>
         <Badge>{tr("sample")}</Badge>
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">{sample.description}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{shown.description}</p>
       <p className="mt-2 text-sm">{tr(structureKey[sample.structure])}</p>
     </button>
   );

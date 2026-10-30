@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useApp, useT } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { getJson, type CollectionItem } from "@/lib/client-api";
+import { localizeSample } from "@/lib/sample-text";
 
 export function PrizesView() {
-  const { session } = useApp();
+  const { session, prefs } = useApp();
   const tr = useT();
   const [items, setItems] = useState<CollectionItem[] | null>(null);
   const [error, setError] = useState(false);
@@ -61,25 +62,33 @@ export function PrizesView() {
       {prizes.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-heading text-xl">{tr("prizes")}</h2>
-          {prizes.map((item) => (
+          {prizes.map((item) => {
+            const shown = localizeSample(prefs.lang, item);
+            return (
             <Link key={item.id} href={`/hunts/${item.joinCode}`} className="block rounded-3xl bg-primary p-4 text-primary-foreground">
               <p className="text-xs uppercase tracking-wide opacity-80">{tr("kept")}</p>
-              <h3 className="font-heading text-2xl">{item.title}</h3>
-              <p className="mt-1">{item.description}</p>
-              <p className="mt-2 text-sm opacity-80">{tr("fromHunt", { name: item.huntName })}</p>
+              <h3 className="font-heading text-2xl">{shown.title}</h3>
+              <p className="mt-1">{shown.description}</p>
+              <p className="mt-2 text-sm opacity-80">{tr("fromHunt", { name: shown.huntName })}</p>
             </Link>
-          ))}
+            );
+          })}
         </section>
       )}
       {marks.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-heading text-xl">{tr("marks")}</h2>
-          {marks.map((item) => (
-            <Link key={item.id} href={`/hunts/${item.joinCode}`} className="block rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
-              <h3 className="font-heading text-lg">{item.title}</h3>
-              <p className="text-sm text-muted-foreground">{tr("fromHunt", { name: item.huntName })}</p>
+          <div className="hunt-cards space-y-3">
+          {marks.map((item) => {
+            const shown = localizeSample(prefs.lang, item);
+            return (
+            <Link key={item.id} href={`/hunts/${item.joinCode}`} className="tint-card block rounded-3xl bg-card p-4 ring-1 ring-foreground/10">
+              <h3 className="font-heading text-lg">{shown.title}</h3>
+              <p className="text-sm text-muted-foreground">{tr("fromHunt", { name: shown.huntName })}</p>
             </Link>
-          ))}
+            );
+          })}
+          </div>
         </section>
       )}
     </div>
